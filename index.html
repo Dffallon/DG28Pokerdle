@@ -1,0 +1,485 @@
+    <!-- The API used in this project is the PokeAPI (https://pokeapi.co/)
+    which was used because it includes Pokemon Names, Images, and other Attributes. 
+This API is also organized using the Pokemon National Dex which is a system of organization
+I am familiar with, so I was able to navigate it easily.
+
+As for the most satisfying part of the assignment, it would be seeing the finished product all put together.
+Building a game with multiple components is challenging. There were many steps that I 
+had thought I completed, but then when implementing later steps had come to learn that they
+were contingent on certain variables, and I had to go back and adjust as I went. -->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Who's That Pokémon</title>
+    <style>
+/* CSS styling for the game and page */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: black;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+#game-container-wrapper {
+    background-color: #444;
+    border: 2px solid red;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+#game-container {
+    text-align: center;
+    color: #333;
+    width: 300px;
+    max-width: 100%;
+}
+
+h1 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: red;
+}
+
+.guess-input {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    margin: 10px 5px;
+    border: none;
+    border-radius: 5px;
+    background-color: #e9ecef;
+    color: #333;
+    text-align: center;
+    font-size: 20px;
+    text-transform: uppercase;
+}
+
+.guess-input:focus {
+    outline: none;
+    border: 2px solid red;
+}
+
+.game-button {
+    padding: 10px 30px;
+    border: none;
+    background-color: black;
+    color: #fff;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.game-button:hover {
+    background-color: #0056b3;
+}
+
+#feedback {
+    margin-bottom: 20px;
+    font-size: 16px;
+    color: red;
+}
+
+#incorrect-letters {
+    margin-top: 20px;
+    font-size: 16px;
+    color: #dc3545;
+}
+
+#pokemon-silhouette {
+    width: 100px;
+    margin: 20px auto;
+    display: block;
+}
+
+#correct-guesses,
+#losses-counter {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: green;
+}
+
+.guess-history-item {
+    display: inline-block;
+    margin-right: 5px;
+    font-family: monospace;
+    font-size: 18px;
+}
+
+.green {
+    color: green;
+}
+
+.red {
+    color: red;
+}
+
+.yellow {
+    color: yellow;
+}
+
+/* Styling for the modal overlay */
+#modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+#modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    max-width: 80%;
+    text-align: center;
+}
+
+/* Add animation styles */
+@keyframes catchEmAll {
+    0% {
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 1;
+        background-color: rgba(255, 255, 255, 0.5);
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+#catch-em-all-animation {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.8);
+    padding: 10px 20px;
+    border-radius: 10px;
+    animation: catchEmAll 1s ease-in-out infinite;
+}
+
+@media only screen and (max-width: 700px) {
+    #game-container {
+        width: 250px; /* Adjust width for smaller screens */
+    }
+}
+
+@media only screen and (max-width: 600px) {
+    #game-container-wrapper {
+        padding: 10px; /* Adjust padding for smaller screens */
+    }
+
+    #game-container {
+        font-size: 14px; /* Adjust font size for smaller screens */
+    }
+
+    .guess-input {
+        width: 25px; /* Adjust width of guess inputs for smaller screens */
+        height: 25px;
+        margin: 5px 3px; /* Adjust margin for smaller screens */
+        font-size: 16px; /* Adjust font size for smaller screens */
+    }
+
+    .game-button {
+        padding: 8px 20px; /* Adjust padding for smaller screens */
+    }
+
+    #pokemon-silhouette {
+        width: 80px; /* Adjust width of silhouette image for smaller screens */
+        margin: 10px auto; /* Adjust margin for smaller screens */
+    }
+
+    #game-controls {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 10px; /* Add margin to separate buttons on smaller screens */
+    }
+
+    #debug-mode-btn,
+    #new-game-btn {
+        padding: 8px 16px; /* Adjust padding for smaller screens */
+        font-size: 14px; /* Adjust font size for smaller screens */
+    }
+}
+
+    </style>
+</head>
+
+<body>
+    <!-- Modal Overlay for game instructions -->
+    <div id="modal-overlay">
+        <div id="modal-content">
+            <h1>Welcome to Pokurdle!</h1>
+            <p>You have 6 chances to guess the 5-letter name of the Pokémon shown.</p>
+            <button id="close-modal-btn">Start</button>
+        </div>
+    </div>
+
+    <!-- Game container wrapper with styling -->
+    <div id="game-container-wrapper">
+        <div id="game-container">
+            <h1>Who's That Pokémon</h1>
+            <p id="feedback">Guess the Pokémon!</p>
+            <input type="text" class="guess-input" maxlength="1">
+            <input type="text" class="guess-input" maxlength="1">
+            <input type="text" class="guess-input" maxlength="1">
+            <input type="text" class="guess-input" maxlength="1">
+            <input type="text" class="guess-input" maxlength="1">
+            <button id="guess-btn" class="game-button">Guess</button>
+            <div id="incorrect-letters">Incorrect Letters:</div>
+            <!-- Incorrect letters box -->
+            <img src="" alt="Silhouette" id="pokemon-silhouette">
+            <div id="correct-guesses">Correct guesses: <span>0</span></div>
+            <div id="losses-counter">Losses: <span>0</span></div>
+            <!-- Losses counter -->
+            <div id="guess-history"></div>
+        </div>
+        <div id="game-controls">
+            <button id="debug-mode-btn" class="game-button">Debug Mode</button>
+            <button id="new-game-btn" class="game-button">New Game</button>
+        </div>
+    </div>
+
+    <!-- JavaScript section for game functionality -->
+    <script>
+        // Variables to store game data and elements
+        let pokemonName;
+        let correctGuesses = 0;
+        let losses = 0;
+        const maxIncorrectGuesses = 6;
+        let incorrectGuesses = 0;
+        let incorrectLetters = '';
+        const guessInputs = document.querySelectorAll('.guess-input');
+        const guessHistoryDiv = document.getElementById('guess-history');
+        const incorrectLettersDiv = document.getElementById('incorrect-letters');
+        const correctGuessesCounter = document.querySelector('#correct-guesses span');
+        const lossesCounter = document.querySelector('#losses-counter span');
+        let debugMode = false;
+
+        // Function to fetch a random Pokémon from the API
+        function fetchRandomPokemon() {
+            // Reset incorrect letters and guesses
+            incorrectLetters = '';
+            incorrectGuesses = 0;
+            incorrectLettersDiv.innerText = 'Incorrect Letters:';
+
+            // Fetch request to the Pokémon API
+            fetch('https://pokeapi.co/api/v2/pokemon?limit=1000')
+                .then(response => response.json())
+                .then(data => {
+                    const pokemonList = data.results.filter(pokemon => pokemon.name.length === 5);
+                    const randomIndex = Math.floor(Math.random() * pokemonList.length);
+                    const randomPokemon = pokemonList[randomIndex];
+                    pokemonName = randomPokemon.name;
+                    fetchPokemonData(randomPokemon.url);
+                    if (debugMode) showPokemonName();
+                })
+                .catch(error => console.error('Error fetching Pokémon data:', error));
+        }
+
+        // Function to fetch Pokémon data and image based on URL and ID
+        function fetchPokemonData(url) {
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const pokemonNumber = data.id;
+                    fetchPokemonImage(pokemonNumber);
+                })
+                .catch(error => console.error('Error fetching Pokémon data:', error));
+        }
+
+        // Function to fetch Pokémon image based on ID
+        function fetchPokemonImage(pokemonNumber) {
+            const imageURL = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonNumber}.png`;
+            document.getElementById('pokemon-silhouette').src = imageURL;
+        }
+
+        // Function to update correct guesses counter
+        function updateCorrectGuessesCounter() {
+            correctGuessesCounter.textContent = correctGuesses;
+        }
+
+        // Function to update losses counter
+        function updateLossesCounter() {
+            lossesCounter.textContent = losses;
+        }
+
+        // Function to handle player's guess
+        function makeGuess() {
+            const userGuess = Array.from(guessInputs).map(input => input.value).join('').toLowerCase();
+            if (userGuess === pokemonName) {
+                document.getElementById('feedback').innerText = 'Congratulations! You guessed it right!';
+                correctGuesses++;
+                updateCorrectGuessesCounter();
+                resetGuessInputs();
+                fetchRandomPokemon();
+                clearGuessHistory();
+                displayCatchEmAllAnimation(); // Call function to display animation upon correct guessing
+            } else {
+                incorrectGuesses++;
+                displayFeedback(userGuess);
+                resetGuessInputs();
+                if (incorrectGuesses >= maxIncorrectGuesses) {
+                    losses++;
+                    updateLossesCounter();
+                    document.getElementById('feedback').innerText = `Game over! The correct answer was ${pokemonName.toUpperCase()}.`;
+                    fetchRandomPokemon();
+                    clearGuessHistory();
+                }
+            }
+        }
+
+        // Function to display feedback for the user's guess
+        function displayFeedback(userGuess) {
+            let hint = '';
+            for (let i = 0; i < userGuess.length; i++) {
+                const guessedLetter = userGuess[i];
+                if (pokemonName.includes(guessedLetter)) {
+                    const actualLetter = pokemonName[i];
+                    if (guessedLetter === actualLetter) {
+                        hint += `<span class="green">${guessedLetter.toUpperCase()}</span>`;
+                    } else {
+                        hint += `<span class="yellow">${guessedLetter.toUpperCase()}</span>`;
+                    }
+                } else {
+                    // Store only unique incorrect letters
+                    if (!incorrectLetters.includes(guessedLetter)) {
+                        incorrectLetters += guessedLetter;
+                    }
+                    hint += `<span class="red">${guessedLetter.toUpperCase()}</span>`;
+                }
+            }
+            const guessHistoryItem = document.createElement('div');
+            guessHistoryItem.classList.add('guess-history-item');
+            guessHistoryItem.innerHTML = hint;
+            guessHistoryDiv.appendChild(guessHistoryItem);
+
+            // Display incorrect letters
+            incorrectLettersDiv.innerText = `Incorrect Letters: ${incorrectLetters}`;
+        }
+
+        // Function to reset guess inputs after each guess
+        function resetGuessInputs() {
+            guessInputs.forEach(input => input.value = '');
+            guessInputs[0].focus();
+        }
+
+        // Function to clear guess history after each round
+        function clearGuessHistory() {
+            guessHistoryDiv.innerHTML = '';
+        }
+
+        // Function to handle window load event
+        window.onload = function () {
+            // Modal overlay logic
+            const modalOverlay = document.getElementById('modal-overlay');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            modalOverlay.style.display = 'flex'; 
+
+            closeModalBtn.addEventListener('click', function () {
+                modalOverlay.style.display = 'none'; 
+            });
+
+            // Initial fetch of a random Pokémon
+            fetchRandomPokemon();
+
+            // Event listeners for guess inputs
+            guessInputs.forEach((input, index) => {
+                input.addEventListener('input', function (event) {
+                    if (event.data !== null) {
+                        if (index < guessInputs.length - 1) {
+                            guessInputs[index + 1].focus();
+                        }
+                    }
+                });
+                input.addEventListener('keypress', function (event) {
+                    if (event.key === 'Enter') {
+                        makeGuess();
+                    }
+                });
+            });
+
+            // Event listener for guess button
+            document.getElementById('guess-btn').addEventListener('click', makeGuess);
+
+            // Event listener for debug mode button
+            document.getElementById('debug-mode-btn').addEventListener('click', toggleDebugMode);
+
+            // Event listener for new game button
+            document.getElementById('new-game-btn').addEventListener('click', newGame);
+
+            // Set focus on the first guess input
+            guessInputs[0].focus();
+        };
+
+        // Function to toggle debug mode
+        function toggleDebugMode() {
+            debugMode = !debugMode;
+            if (debugMode) {
+                showPokemonName();
+                document.getElementById('debug-mode-btn').textContent = 'Hide Debug Mode';
+            } else {
+                hidePokemonName();
+                document.getElementById('debug-mode-btn').textContent = 'Debug Mode';
+            }
+        }
+
+        // Function to show the Pokemon name in debug mode
+        function showPokemonName() {
+            document.getElementById('feedback').innerText = `Debug Mode: The answer is ${pokemonName.toUpperCase()}`;
+        }
+
+        // Function to hide the Pokemon name
+        function hidePokemonName() {
+            document.getElementById('feedback').innerText = 'Guess the Pokémon!';
+        }
+
+        // Function to start a new game
+        function newGame() {
+            correctGuesses = 0;
+            losses = 0;
+            updateCorrectGuessesCounter();
+            updateLossesCounter();
+            clearGuessHistory();
+            resetGuessInputs();
+            fetchRandomPokemon();
+            if (debugMode) showPokemonName();
+            else hidePokemonName();
+        }
+
+        // Function to display the "Gotta catch em' all!" animation upon correct guessing
+        function displayCatchEmAllAnimation() {
+            const catchEmAllAnimation = document.createElement('div');
+            catchEmAllAnimation.id = 'catch-em-all-animation';
+            catchEmAllAnimation.textContent = 'Gotta catch em\' all!';
+            document.body.appendChild(catchEmAllAnimation);
+
+            setTimeout(() => {
+                catchEmAllAnimation.remove();
+            }, 6000); // Display animation for 6 seconds
+        }
+    </script>
+
+</body>
+
+</html>
